@@ -7,8 +7,8 @@ export interface User {
 }
 
 const VALID_CREDENTIALS = {
-  username: "CentroMotos",
-  password: "centromotos123",
+  username: "Brix",
+  password: "Brix123*",
 }
 
 export function validateCredentials(username: string, password: string): User | null {
