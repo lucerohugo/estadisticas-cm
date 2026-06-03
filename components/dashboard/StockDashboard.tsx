@@ -198,7 +198,7 @@ export function StockDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {/* Disponibilidad donut */}
         <ChartCard
           title="Estado de disponibilidad"
@@ -252,7 +252,7 @@ export function StockDashboard() {
         </ChartCard>
 
         {/* Nuevos vs usados stacked */}
-        <ChartCard title="Nuevos vs. usados por mes" accentBar="bg-sky-400">
+        {/* <ChartCard title="Nuevos vs. usados por mes" accentBar="bg-sky-400">
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={usadoData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
@@ -264,7 +264,7 @@ export function StockDashboard() {
               <Bar dataKey="usados" name="Usados" stackId="a" fill={COLORS[3]} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </ChartCard>
+        </ChartCard> */}
       </div>
 
       {/* Ingreso mensual */}
