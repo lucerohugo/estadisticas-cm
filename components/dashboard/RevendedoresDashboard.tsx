@@ -91,7 +91,7 @@ export function RevendedoresDashboard() {
       </SectionHeader>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiCard
           label="Total"
           value={formatNum(kpis.total)}
@@ -115,14 +115,6 @@ export function RevendedoresDashboard() {
           accent="border-l-4 border-l-red-400"
           icon={UserX}
           iconBg="bg-red-50 dark:bg-red-950"
-        />
-        <KpiCard
-          label="Con ubicación"
-          value={formatNum(kpis.conUbicacion)}
-          sub={`${kpis.total > 0 ? Math.round((kpis.conUbicacion / kpis.total) * 100) : 0}% con loc.`}
-          accent="border-l-4 border-l-sky-400"
-          icon={MapPin}
-          iconBg="bg-sky-50 dark:bg-sky-950"
         />
       </div>
 

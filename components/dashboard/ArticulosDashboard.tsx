@@ -115,7 +115,7 @@ export function ArticulosDashboard() {
       <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiCard
           label="Total artículos"
           value={formatNum(kpis.total)}
@@ -139,14 +139,6 @@ export function ArticulosDashboard() {
           accent="border-l-4 border-l-emerald-400"
           icon={Layers}
           iconBg="bg-emerald-50 dark:bg-emerald-950"
-        />
-        <KpiCard
-          label="Con precio"
-          value={`${kpis.total > 0 ? Math.round((kpis.conPrecio / kpis.total) * 100) : 0}%`}
-          sub={`${formatNum(kpis.conPrecio)} artículos`}
-          accent="border-l-4 border-l-violet-400"
-          icon={Star}
-          iconBg="bg-violet-50 dark:bg-violet-950"
         />
       </div>
 

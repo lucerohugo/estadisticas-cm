@@ -179,7 +179,7 @@ export function StockDashboard() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
         <KpiCard
           label="Total unidades"
           value={formatNum(kpis.total)}
@@ -195,14 +195,6 @@ export function StockDashboard() {
           accent="border-l-4 border-l-sky-400"
           icon={CheckSquare}
           iconBg="bg-sky-50 dark:bg-sky-950"
-        />
-        <KpiCard
-          label="Usado o Nuevo"
-          value={formatNum(kpis.usados)}
-          sub="con historial de uso"
-          accent="border-l-4 border-l-amber-400"
-          icon={Activity}
-          iconBg="bg-amber-50 dark:bg-amber-950"
         />
       </div>
 

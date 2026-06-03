@@ -630,7 +630,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
                           ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400"
                           : "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400"
                       }`}>
-                        {p.ped_exp ? "expedido" : "pendiente"}
+                        {p.ped_exp ? "exportados" : "pendiente"}
                       </span>
                     </td>
                   </tr>
