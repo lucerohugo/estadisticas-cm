@@ -3,18 +3,18 @@
 import { useMemo, useState } from "react"
 import {
   AreaChart, Area, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, Tooltip, Legend,
 } from "recharts"
 import {
-  ShoppingCart, Package, Boxes, Users,
+  ShoppingCart, Package, Boxes, Users, MapPin,
   TrendingUp, ArrowRight, CheckCircle, Clock,
 } from "lucide-react"
 import {
-  usePedidos, useArticulos, useStock, useRevendedores,
+  usePedidos, useArticulos, useStock, useRevendedores, useProvincias,
   filterByPeriod, formatARS, formatNum, countBy,
   type Period, type DateRange,
 } from "@/lib/api"
-import { SkeletonCard, COLORS, PeriodTabs } from "./shared"
+import { SkeletonCard, COLORS, PeriodTabs, ChartCard } from "./shared"
 import {
   Select,
   SelectContent,
@@ -139,8 +139,9 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
   const { data: pedidos, isLoading: pLoad } = usePedidos()
   const { data: articulos, isLoading: aLoad } = useArticulos()
   const { data: revendedores, isLoading: rLoad } = useRevendedores()
-  const [selectedRev, setSelectedRev] = useState<number | null>(null)
-  const { data: stock, isLoading: sLoad } = useStock(selectedRev)
+  const { data: provincias, isLoading: provLoad } = useProvincias()
+  const [selectedRev, setSelectedRev] = useState<number | undefined>(undefined)
+  const { data: stock, isLoading: sLoad } = useStock(selectedRev ?? null)
   
   const [period, setPeriod] = useState<Period>("mes")
   const [range, setRange] = useState<DateRange>(() => {
@@ -148,7 +149,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
     return { from: today, to: today }
   })
 
-  const isLoading = pLoad || aLoad || (selectedRev ? sLoad : false) || rLoad
+  const isLoading = pLoad || aLoad || (selectedRev !== undefined ? sLoad : false) || rLoad || provLoad
 
   // Current period pedidos
   const thisPeriod = useMemo(() => filterByPeriod(pedidos ?? [], period, range), [pedidos, period, range])
@@ -179,6 +180,9 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
     const totalArticulos = articulos?.length ?? 0
     const totalMarcas = new Set(articulos?.map((a) => a.mar_nomb)).size
 
+    // Provincias
+    const totalProvincias = provincias?.length ?? 0
+
     // Stock
     const totalStock = stock?.length ?? 0
     const disponibles = stock?.filter((s) => s.art_bdis === "S").length ?? 0
@@ -192,10 +196,11 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       totalPedidos, montoMes, exportados, pendientes, ticketProm,
       trendPedidos, trendMonto, trendExp, trendPend,
       totalArticulos, totalMarcas,
+      totalProvincias,
       totalStock, disponibles, porcentajeDisp,
       totalRev, revActivos,
     }
-  }, [thisPeriod, lastMes, articulos, stock, revendedores])
+  }, [thisPeriod, lastMes, articulos, stock, revendedores, provincias])
 
   // Chart data
   const marcaData = useMemo(() => countBy(thisPeriod, "mar_nomb").slice(0, 5), [thisPeriod])
@@ -203,7 +208,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
 
   // Recent pedidos
   const recentPedidos = useMemo(
-    () => [...(pedidos ?? [])].sort((a, b) => b.pov_codi - a.pov_codi).slice(0, 5),
+    () => [...(pedidos ?? [])].sort((a, b) => b.pov_codi - a.pov_codi).slice(0, 10),
     [pedidos]
   )
 
@@ -262,23 +267,23 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
         </button>
 
         <button
-          onClick={() => onNavigate("articulos")}
+          onClick={() => onNavigate("provincias")}
           className="bg-card rounded-2xl border border-border p-5 text-left hover:shadow-md transition-shadow group"
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
-              <Package size={20} className="text-sky-500" />
+            <div className="w-10 h-10 rounded-xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+              <MapPin size={20} className="text-pink-500" />
             </div>
-            <div className="w-2 h-2 rounded-full bg-sky-400" />
+            <div className="w-2 h-2 rounded-full bg-pink-400" />
           </div>
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Artículos</p>
-          <p className="text-3xl font-bold text-foreground mt-1">{formatNum(kpis.totalArticulos)}</p>
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Provincias</p>
+          <p className="text-3xl font-bold text-foreground mt-1">{formatNum(kpis.totalProvincias)}</p>
           <p className="text-xs text-muted-foreground mt-2 group-hover:text-primary transition-colors">
             Ver detalle <ArrowRight size={10} className="inline ml-1" />
           </p>
         </button>
 
-        {selectedRev !== null ? (
+        {selectedRev !== undefined ? (
           <button
             onClick={() => onNavigate("stock", { selectedRev })}
             className="bg-card rounded-2xl border border-border p-5 text-left hover:shadow-md transition-shadow group"
@@ -309,16 +314,16 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
             </div>
             <div className="flex gap-2 items-center flex-wrap">
               <button
-                onClick={() => setSelectedRev(null)}
+                onClick={() => setSelectedRev(undefined)}
                 className={`px-4 py-2 rounded-lg border transition-colors font-medium text-sm ${
-                  selectedRev === null
+                  selectedRev === undefined
                     ? "bg-emerald-500 text-white border-emerald-600"
                     : "border-border hover:bg-accent"
                 }`}
               >
                 Todos
               </button>
-              <Select value={selectedRev ? selectedRev.toString() : ""} onValueChange={(val) => setSelectedRev(parseInt(val))}>
+              <Select value={selectedRev !== undefined ? String(selectedRev) : ""} onValueChange={(val) => setSelectedRev(val ? parseInt(val) : undefined)}>
                 <SelectTrigger className="flex-1 min-w-[200px]">
                   <SelectValue placeholder="Seleccionar revendedor..." />
                 </SelectTrigger>
@@ -360,12 +365,12 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
           <SmallKpi
             label="Total pedidos"
             value={formatNum(kpis.totalPedidos)}
-            sub="este período"
+            sub="Este período"
             trend={kpis.trendPedidos}
             borderColor="border-l-orange-400"
           />
           <SmallKpi
-            label="Facturación"
+            label="Monto Total Precio Lista"
             value={formatARS(kpis.montoMes)}
             sub="monto total"
             trend={kpis.trendMonto}
@@ -381,8 +386,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
           <SmallKpi
             label="Pendientes"
             value={formatNum(kpis.pendientes)}
-            sub={`monto prom. ${formatARS(kpis.ticketProm)}`}
-            trend={kpis.trendPend}
+            sub={`Monto prom. ${formatARS(kpis.ticketProm)}`}
             borderColor="border-l-amber-400"
           />
         </div>
@@ -425,8 +429,8 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
             <h3 className="text-sm font-semibold text-foreground mb-1">Forma de pago</h3>
             <p className="text-xs text-muted-foreground mb-4">composición</p>
             <div className="flex items-center gap-6">
-              <ResponsiveContainer width={140} height={140}>
-                <PieChart>
+              <div style={{ width: 140, height: 140 }}>
+                <PieChart width={140} height={140}>
                   <Pie
                     data={financieraData}
                     dataKey="value"
@@ -442,7 +446,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
                     ))}
                   </Pie>
                 </PieChart>
-              </ResponsiveContainer>
+              </div>
               <div className="flex-1 space-y-2">
                 {financieraData.map((item, i) => (
                   <div key={item.name} className="flex items-center gap-2">
@@ -507,7 +511,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
               {/* Selector de Revendedor */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-2 uppercase">Selecciona revendedor:</label>
-                <Select value={selectedRev ? selectedRev.toString() : ""} onValueChange={(val) => setSelectedRev(parseInt(val))}>
+                <Select value={selectedRev !== undefined ? String(selectedRev) : ""} onValueChange={(val) => setSelectedRev(val ? parseInt(val) : undefined)}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Elige un revendedor..." />
                   </SelectTrigger>
@@ -533,7 +537,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
                   </button>
                 </div>
                 
-                {!selectedRev ? (
+                {selectedRev === undefined ? (
                   <div className="flex flex-col items-center justify-center py-6 text-center">
                     <Boxes size={28} className="text-muted-foreground/50 mb-2" />
                     <p className="text-xs text-muted-foreground">Selecciona un revendedor arriba para ver stock</p>
@@ -619,46 +623,40 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       {/* ═══════════════════════════════════════════════════════════════════════
           SECTION 4: ÚLTIMOS PEDIDOS - Table
          ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="h-1 bg-slate-400" />
-        <div className="p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Últimos pedidos</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="py-2.5 pr-4 text-left text-muted-foreground font-medium">#</th>
-                  <th className="py-2.5 pr-4 text-left text-muted-foreground font-medium">Revendedor</th>
-                  <th className="py-2.5 pr-4 text-left text-muted-foreground font-medium">Cliente</th>
-                  <th className="py-2.5 pr-4 text-left text-muted-foreground font-medium">Artículo</th>
-                  <th className="py-2.5 pr-4 text-right text-muted-foreground font-medium">Monto</th>
-                  <th className="py-2.5 text-right text-muted-foreground font-medium">Estado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {recentPedidos.map((p) => (
-                  <tr key={p.pov_codi} className="hover:bg-muted/40 transition-colors">
-                    <td className="py-3 pr-4 text-muted-foreground font-mono">{p.pov_codi}</td>
-                    <td className="py-3 pr-4 text-foreground font-medium truncate max-w-[120px]">{p.rev_nomb || "—"}</td>
-                    <td className="py-3 pr-4 text-muted-foreground truncate max-w-[100px]">{p.cli_nomb || "—"}</td>
-                    <td className="py-3 pr-4 text-muted-foreground truncate max-w-[120px]">{p.art_nomb || "—"}</td>
-                    <td className="py-3 pr-4 text-right font-medium text-foreground">{formatARS(parseFloat(p.pov_monf || "0"))}</td>
-                    <td className="py-3 text-right">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium ${
-                        p.ped_exp 
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400"
-                      }`}>
-                        {p.ped_exp ? "exportados" : "pendiente"}
-                      </span>
-                    </td>
-                  </tr>
+      <ChartCard title="Últimos pedidos" subtitle="Los 10 más recientes del sistema" accentBar="bg-slate-400">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border">
+                {["#", "Revendedor", "Cliente", "Artículo", "Fecha", "Precio Lista", "Importe Crédito", "Estado"].map((h) => (
+                  <th key={h} className={`py-2.5 pr-3 text-muted-foreground font-medium ${["Precio Lista", "Importe Crédito", "Estado"].includes(h) ? "text-right" : "text-left"}`}>{h}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {recentPedidos.map((p) => (
+                <tr key={p.pov_codi} className="hover:bg-muted/40 transition-colors">
+                  <td className="py-2.5 pr-3 text-muted-foreground font-mono">{p.pov_codi}</td>
+                  <td className="py-2.5 pr-3 text-foreground font-medium truncate max-w-[120px]">{p.rev_nomb || "—"}</td>
+                  <td className="py-2.5 pr-3 text-muted-foreground truncate max-w-[100px]">{p.cli_nomb || "—"}</td>
+                  <td className="py-2.5 pr-3 text-muted-foreground truncate max-w-[120px]">{p.art_nomb || "—"}</td>
+                  <td className="py-2.5 pr-3 text-muted-foreground">{p.pov_fech}</td>
+                  <td className="py-2.5 pr-3 text-right font-medium text-foreground">{formatARS(parseFloat(p.pov_monf || "0"))}</td>
+                  <td className="py-2.5 pr-3 text-right font-medium text-foreground">{formatARS(parseFloat(p.pov_impc || "0"))}</td>
+                  <td className="py-2.5 text-right">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-medium ${
+                      p.ped_exp ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                               : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+                    }`}>
+                      {p.ped_exp ? "Exportados" : "Pendiente"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </div>
+      </ChartCard>
     </div>
   )
 }

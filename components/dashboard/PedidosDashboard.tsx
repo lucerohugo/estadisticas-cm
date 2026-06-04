@@ -9,7 +9,7 @@ import {
 } from "recharts"
 import { ShoppingCart, TrendingUp, CheckCircle, Clock } from "lucide-react"
 import {
-  usePedidos, filterByPeriod, groupPedidosByDate,
+  usePedidos, useLocalidades, useProvincias, useRevendedores, filterByPeriod, groupPedidosByDate,
   countBy, formatARS, formatNum,
   type Period, type DateRange,
 } from "@/lib/api"
@@ -41,6 +41,9 @@ function CustomTooltip({ active, payload, label }: any) {
 
 export function PedidosDashboard() {
   const { data: pedidos, isLoading } = usePedidos()
+  const { data: localidades } = useLocalidades()
+  const { data: provincias } = useProvincias()
+  const { data: revendedores } = useRevendedores()
   const [period, setPeriod] = useState<Period>("mes")
   const [range, setRange] = useState<DateRange>(() => {
     const today = new Date().toISOString().slice(0, 10)
@@ -71,9 +74,85 @@ export function PedidosDashboard() {
     ...item,
     displayName: item.name.length > 28 ? item.name.substring(0, 25) + "..." : item.name
   })), [filtered])
-  const financieraData = useMemo(() => countBy(filtered, "com_nomb").slice(0, 7), [filtered])
+  const financieraData = useMemo(() => {
+    const grouped = new Map<string, number>()
+    for (const p of filtered) {
+      // Combinar com_letr y com_nomb: "A - FACTURA"
+      const key = p.com_letr && p.com_nomb ? `${p.com_letr} - ${p.com_nomb}` : (p.com_nomb || "Sin dato")
+      grouped.set(key, (grouped.get(key) ?? 0) + 1)
+    }
+    return Array.from(grouped.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 7)
+  }, [filtered])
   const colorData = useMemo(() => countBy(filtered, "col_nomb").slice(0, 6), [filtered])
   const modeloData = useMemo(() => countBy(filtered, "art_nomb").slice(0, 8), [filtered])
+
+  // Mapeos para provincias
+  const locToProvinceMap = useMemo(() => {
+    const map = new Map<number, number>()
+    if (localidades) {
+      localidades.forEach((loc) => {
+        map.set(loc.loc_codi, loc.pci_codi)
+      })
+    }
+    return map
+  }, [localidades])
+
+  const provinceNameMap = useMemo(() => {
+    const map = new Map<number, string>()
+    if (provincias) {
+      provincias.forEach((prov) => {
+        map.set(prov.pci_codi, prov.pci_nomb)
+      })
+    }
+    return map
+  }, [provincias])
+
+  const locNameMap = useMemo(() => {
+    const map = new Map<number, string>()
+    if (localidades) {
+      localidades.forEach((loc) => {
+        map.set(loc.loc_codi, loc.loc_nomb)
+      })
+    }
+    return map
+  }, [localidades])
+
+  // Calcular provincia + localidad con más ventas
+  const topProvince = useMemo(() => {
+    if (!filtered.length || !revendedores) return null
+    const provinceLocCounts = new Map<string, { pciCode: number; locCode: number; value: number }>()
+    const revToLocMap = new Map<number, number>()
+
+    revendedores.forEach((rev) => {
+      if (rev.loc_codi !== null && rev.loc_codi !== undefined) {
+        revToLocMap.set(rev.rev_codi, rev.loc_codi)
+      }
+    })
+
+    filtered.forEach((p) => {
+      const locCode = revToLocMap.get(p.rev_codi)
+      if (locCode !== undefined) {
+        const pciCode = locToProvinceMap.get(locCode)
+        if (pciCode !== undefined) {
+          const key = `${pciCode}-${locCode}`
+          const current = provinceLocCounts.get(key) || { pciCode, locCode, value: 0 }
+          provinceLocCounts.set(key, { ...current, value: current.value + 1 })
+        }
+      }
+    })
+
+    const entries = Array.from(provinceLocCounts.values())
+    const maxEntry = entries.length > 0 ? entries.reduce((max, current) => (current.value > max.value ? current : max)) : null
+
+    if (!maxEntry) return null
+    return {
+      name: `${provinceNameMap.get(maxEntry.pciCode) || `Provincia ${maxEntry.pciCode}`} - ${locNameMap.get(maxEntry.locCode) || `Localidad ${maxEntry.locCode}`}`,
+      value: maxEntry.value,
+    }
+  }, [filtered, revendedores, locToProvinceMap, provinceNameMap, locNameMap])
 
   const recentPedidos = useMemo(
     () => [...(pedidos ?? [])].sort((a, b) => b.pov_codi - a.pov_codi).slice(0, 10),
@@ -88,18 +167,19 @@ export function PedidosDashboard() {
     const topRev = revData[0]
     if (topMarca) list.push(`La marca más vendida es ${topMarca.name} con ${topMarca.value} pedidos (${Math.round((topMarca.value / filtered.length) * 100)}% del período).`)
     if (topRev) list.push(`El revendedor con más pedidos es ${topRev.name} con ${topRev.value} pedidos.`)
+    if (topProvince) list.push(`La provincia con más ventas es ${topProvince.name}  -  (${Math.round((topProvince.value / filtered.length) * 100)}% del período).`)
     const pctExp = filtered.length > 0 ? Math.round((kpis.exportados / filtered.length) * 100) : 0
     if (pctExp < 60) list.push(`Solo el ${pctExp}% de los pedidos fueron exportados — posible cuello de botella en despacho.`)
     else list.push(`El ${pctExp}% de los pedidos están exportados. Buen nivel de cumplimiento.`)
-    list.push(`Ticket promedio del período: ${formatARS(kpis.ticketProm)}.`)
+    list.push(`Monto promedio pendiente: ${formatARS(kpis.ticketProm)}.`)
     return list
-  }, [filtered, marcaData, revData, kpis])
+  }, [filtered, marcaData, revData, kpis, topProvince])
 
   const periodLabel = useMemo(() => {
-    if (period === "dia") return "hoy"
-    if (period === "semana") return "esta semana"
-    if (period === "mes") return "este mes"
-    if (period === "año") return "este año"
+    if (period === "dia") return "Hoy"
+    if (period === "semana") return "Esta semana"
+    if (period === "mes") return "Este mes"
+    if (period === "año") return "Este año"
     if (period === "rango") return `${range.from} → ${range.to}`
     return ""
   }, [period, range])
@@ -140,9 +220,9 @@ export function PedidosDashboard() {
           iconBg="bg-orange-50 dark:bg-orange-950"
         />
         <KpiCard
-          label="Facturación"
+          label="Monto Total Precio Lista"
           value={formatARS(kpis.monto)}
-          sub="monto total"
+          sub="Precio lista"
           accent="border-l-4 border-l-blue-400"
           icon={TrendingUp}
           iconBg="bg-blue-50 dark:bg-blue-950"
@@ -158,7 +238,7 @@ export function PedidosDashboard() {
         <KpiCard
           label="Pendientes"
           value={formatNum(kpis.pendientes)}
-          sub={`monto prom. ${formatARS(kpis.ticketProm)}`}
+          sub={`Monto prom. ${formatARS(kpis.ticketProm)}`}
           accent="border-l-4 border-l-amber-400"
           icon={Clock}
           iconBg="bg-amber-50 dark:bg-amber-950"
@@ -283,7 +363,7 @@ export function PedidosDashboard() {
       {/* Row 3: Financieras + Top modelos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard
-          title="Comprobantes / Financieras"
+          title="Comprobantes"
           accentBar="bg-violet-400"
           toolbar={<ChartTypeSwitcher value={finChartType} onChange={setFinChartType} options={["pie", "bar"]} />}
         >
@@ -346,8 +426,8 @@ export function PedidosDashboard() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border">
-                {["#", "Revendedor", "Cliente", "Artículo", "Fecha", "Monto", "Estado"].map((h) => (
-                  <th key={h} className={`py-2.5 pr-3 text-muted-foreground font-medium ${h === "Monto" || h === "Estado" ? "text-right" : "text-left"}`}>{h}</th>
+                {["#", "Revendedor", "Cliente", "Artículo", "Fecha", "Precio Lista", "Importe Crédito", "Estado"].map((h) => (
+                  <th key={h} className={`py-2.5 pr-3 text-muted-foreground font-medium ${["Precio Lista", "Importe Crédito", "Estado"].includes(h) ? "text-right" : "text-left"}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -360,6 +440,7 @@ export function PedidosDashboard() {
                   <td className="py-2.5 pr-3 text-muted-foreground truncate max-w-[120px]">{p.art_nomb || "—"}</td>
                   <td className="py-2.5 pr-3 text-muted-foreground">{p.pov_fech}</td>
                   <td className="py-2.5 pr-3 text-right font-medium text-foreground">{formatARS(parseFloat(p.pov_monf || "0"))}</td>
+                  <td className="py-2.5 pr-3 text-right font-medium text-foreground">{formatARS(parseFloat(p.pov_impc || "0"))}</td>
                   <td className="py-2.5 text-right">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-medium ${
                       p.ped_exp ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"

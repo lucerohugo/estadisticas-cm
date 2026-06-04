@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, AreaChart, Area,
 } from "recharts"
 import { Package, Tag, Layers, Star } from "lucide-react"
-import { useArticulos, countBy, formatNum, type Period, type DateRange } from "@/lib/api"
+import { useArticulos, usePedidos, countBy, formatNum, type Period, type DateRange } from "@/lib/api"
 import {
   SectionHeader, PeriodTabs, ChartTypeSwitcher, KpiCard,
   ChartCard, SkeletonCard, SkeletonChart, COLORS,
@@ -32,6 +32,7 @@ function CustomTooltip({ active, payload, label }: any) {
 
 export function ArticulosDashboard() {
   const { data: articulos, isLoading } = useArticulos()
+  const { data: pedidos } = usePedidos()
   const [marcaChart, setMarcaChart] = useState<ChartType>("bar")
   const [rubroChart, setRubroChart] = useState<ChartType>("pie")
   const [period, setPeriod] = useState<Period>("año")
@@ -88,6 +89,50 @@ export function ArticulosDashboard() {
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(-12)
   }, [articulos])
+
+  // Artículos sin pedidos y con menos venta
+  const noPedidosData = useMemo(() => {
+    if (!articulos || !pedidos) return []
+    const pedidosByArticle = new Map<string, number>()
+    
+    // Contar pedidos por nombre de artículo
+    for (const p of pedidos) {
+      const count = (pedidosByArticle.get(p.art_nomb || "") ?? 0) + 1
+      pedidosByArticle.set(p.art_nomb || "", count)
+    }
+    
+    // Encontrar artículos sin pedidos
+    return articulos
+      .filter(a => !pedidosByArticle.has(a.art_nomb))
+      .map(a => ({
+        name: a.art_nomb,
+        value: 0,
+        displayName: a.art_nomb.length > 30 ? a.art_nomb.substring(0, 27) + "..." : a.art_nomb
+      }))
+      .slice(0, 10)
+  }, [articulos, pedidos])
+
+  // Artículos con menos venta (5 o menos pedidos)
+  const lowestSalesData = useMemo(() => {
+    if (!articulos || !pedidos) return []
+    const pedidosByArticle = new Map<string, { name: string; displayName: string; value: number }>()
+    
+    // Contar pedidos por nombre de artículo
+    for (const a of articulos) {
+      const count = pedidos.filter(p => p.art_nomb === a.art_nomb).length
+      if (count > 0 && count <= 5) {
+        pedidosByArticle.set(a.art_nomb, {
+          name: a.art_nomb,
+          displayName: a.art_nomb.length > 30 ? a.art_nomb.substring(0, 27) + "..." : a.art_nomb,
+          value: count
+        })
+      }
+    }
+    
+    // Ordenar por menos ventas
+    return Array.from(pedidosByArticle.values())
+      .sort((a, b) => a.value - b.value)
+  }, [articulos, pedidos])
 
   if (isLoading) {
     return (
@@ -229,6 +274,95 @@ export function ArticulosDashboard() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
+      {/* Artículos sin pedidos y con menos venta */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Artículos sin pedidos */}
+        <ChartCard title="Articulos sin pedidos" accentBar="bg-red-400">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 pr-4 text-muted-foreground font-medium">#</th>
+                  <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Articulo</th>
+                  <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Marca</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Rubro</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {noPedidosData.length > 0 ? (
+                  noPedidosData.map((item, idx) => {
+                    const art = articulos?.find(a => a.art_nomb === item.name)
+                    return (
+                      <tr key={idx} className="hover:bg-muted/40 transition-colors">
+                        <td className="py-2 pr-4 text-muted-foreground font-mono">{idx + 1}</td>
+                        <td className="py-2 pr-4 text-foreground font-medium truncate max-w-[200px]">{item.name}</td>
+                        <td className="py-2 pr-4 text-muted-foreground">{art?.mar_nomb || "—"}</td>
+                        <td className="py-2 text-muted-foreground">{art?.rub_nomb || "—"}</td>
+                      </tr>
+                    )
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="py-4 text-center text-muted-foreground text-xs">
+                      No hay motos sin pedidos
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {noPedidosData.length > 0 && (
+            <p className="text-xs text-muted-foreground text-center pt-3 border-t border-border">
+              Total: {formatNum(noPedidosData.length)} motos sin pedidos
+            </p>
+          )}
+        </ChartCard>
+
+        {/* Artículos con menos venta */}
+        <ChartCard title="Motos con menos venta" accentBar="bg-amber-400">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 pr-4 text-muted-foreground font-medium">#</th>
+                  <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Moto</th>
+                  <th className="text-right py-2 pr-4 text-muted-foreground font-medium">Pedidos</th>
+                  <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Marca</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Rubro</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {lowestSalesData.length > 0 ? (
+                  lowestSalesData.map((item, idx) => {
+                    const art = articulos?.find(a => a.art_nomb === item.name)
+                    return (
+                      <tr key={idx} className="hover:bg-muted/40 transition-colors">
+                        <td className="py-2 pr-4 text-muted-foreground font-mono">{idx + 1}</td>
+                        <td className="py-2 pr-4 text-foreground font-medium truncate max-w-[180px]">{item.name}</td>
+                        <td className="py-2 pr-4 text-right font-medium text-foreground">{formatNum(item.value)}</td>
+                        <td className="py-2 pr-4 text-muted-foreground">{art?.mar_nomb || "—"}</td>
+                        <td className="py-2 text-muted-foreground">{art?.rub_nomb || "—"}</td>
+                      </tr>
+                    )
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center text-muted-foreground text-xs">
+                      No hay datos de motos con ventas
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {lowestSalesData.length > 0 && (
+            <p className="text-xs text-muted-foreground text-center pt-3 border-t border-border">
+              Mostrando las {formatNum(lowestSalesData.length)} motos con menos venta
+            </p>
+          )}
         </ChartCard>
       </div>
 

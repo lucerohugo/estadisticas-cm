@@ -474,3 +474,136 @@ export function countBy<T>(
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
 }
+
+// ================================================================
+// PDF Export Functions
+// ================================================================
+
+function generarHTMLPedido(pedido: Pedido): string {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "-"
+    const [year, month, day] = dateStr.split("-")
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    return date.toLocaleDateString("es-AR")
+  }
+
+  const formatCurrency = (value: string | null) => {
+    const num = parseFloat(value || "0") || 0
+    return num.toLocaleString("es-AR", { style: "currency", currency: "ARS" })
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #ff8c00; padding-bottom: 20px; margin-bottom: 30px; }
+        .header-left h1 { font-size: 28px; color: #ff8c00; margin-bottom: 5px; }
+        .header-left p { color: #666; font-size: 14px; }
+        .header-right { text-align: right; }
+        .header-right p { margin: 5px 0; font-size: 13px; }
+        .section { margin-bottom: 25px; }
+        .section-title { background: #f5f5f5; padding: 8px 12px; font-weight: bold; font-size: 13px; color: #333; margin-bottom: 12px; border-left: 4px solid #ff8c00; }
+        .section-content { padding: 0 12px; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 10px; }
+        .field { margin-bottom: 8px; }
+        .field-label { font-size: 11px; color: #999; text-transform: uppercase; font-weight: 600; }
+        .field-value { font-size: 13px; color: #333; margin-top: 3px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #f5f5f5; padding: 8px; text-align: left; font-size: 12px; font-weight: bold; border-bottom: 2px solid #ddd; }
+        td { padding: 8px; font-size: 12px; border-bottom: 1px solid #eee; }
+        .total-row { background: #f9f9f9; font-weight: bold; }
+        .footer { text-align: center; font-size: 11px; color: #999; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="header-left">
+            <h1>PEDIDO #${pedido.pov_codi}</h1>
+            <p>Centro Motos - Estadísticas</p>
+          </div>
+          <div class="header-right">
+            <p><strong>Fecha:</strong> ${formatDate(pedido.pov_fech)}</p>
+            <p><strong>Revendedor:</strong> ${pedido.rev_nomb || "-"}</p>
+            <p><strong>Estado:</strong> <span style="color: ${pedido.ped_exp ? "#22c55e" : "#f59e0b"}; font-weight: bold;">${pedido.ped_exp ? "EXPORTADO" : "PENDIENTE"}</span></p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Datos del Cliente</div>
+          <div class="section-content">
+            <div class="row">
+              <div class="field">
+                <div class="field-label">Cliente</div>
+                <div class="field-value">${pedido.cli_nomb || "-"}</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Artículo</div>
+                <div class="field-value">${pedido.art_nomb || "-"}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Datos Financieros</div>
+          <div class="section-content">
+            <table>
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th style="text-align: right;">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Monto Final</td>
+                  <td style="text-align: right; font-weight: bold;">${formatCurrency(pedido.pov_monf)}</td>
+                </tr>
+                <tr>
+                  <td>Financiera</td>
+                  <td style="text-align: right;">${pedido.com_nomb || "-"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>Documento generado automáticamente por Centro Motos — Estadísticas</p>
+          <p>${new Date().toLocaleString("es-AR")}</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+export async function exportarPedidoComoPDF(pedido: Pedido): Promise<{ success: boolean; error?: string }> {
+  try {
+    const html2pdf = (await import("html2pdf.js")).default
+
+    const element = document.createElement("div")
+    element.innerHTML = generarHTMLPedido(pedido)
+
+    const opt: any = {
+      margin: 10,
+      filename: `Pedido_${pedido.pov_codi}_${new Date().toISOString().slice(0, 10)}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: "portrait", unit: "mm", format: "a4" },
+    }
+
+    await html2pdf().set(opt).from(element).save()
+
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error desconocido"
+    return { success: false, error: message }
+  }
+}

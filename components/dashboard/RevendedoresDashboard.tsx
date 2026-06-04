@@ -41,6 +41,7 @@ export function RevendedoresDashboard() {
     return { from: today, to: today }
   })
   const [topChart, setTopChart] = useState<ChartType>("bar")
+  const [lowestChart, setLowestChart] = useState<ChartType>("bar")
 
   const isLoading = rLoading || pLoading
 
@@ -59,6 +60,14 @@ export function RevendedoresDashboard() {
   // Top revendedores por pedidos en el período
   const topRevData = useMemo(() =>
     countBy(filteredPedidos, "rev_nomb").slice(0, 10).map(item => ({
+      ...item,
+      displayName: item.name.length > 28 ? item.name.substring(0, 25) + "..." : item.name
+    })),
+  [filteredPedidos])
+
+  // Los que menos venden en el período
+  const lowestRevData = useMemo(() =>
+    countBy(filteredPedidos, "rev_nomb").sort((a, b) => a.value - b.value).slice(0, 10).map(item => ({
       ...item,
       displayName: item.name.length > 28 ? item.name.substring(0, 25) + "..." : item.name
     })),
@@ -122,7 +131,7 @@ export function RevendedoresDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Activos/inactivos donut */}
         <ChartCard title="Estado de revendedores" accentBar="bg-violet-400">
           <ResponsiveContainer width="100%" height={230}>
@@ -184,6 +193,43 @@ export function RevendedoresDashboard() {
             </ResponsiveContainer>
           )}
         </ChartCard>
+
+        {/* Los que menos venden */}
+        <ChartCard
+          title="Menor venta por pedidos"
+          accentBar="bg-amber-400"
+          toolbar={
+            <ChartTypeSwitcher
+              value={lowestChart}
+              onChange={setLowestChart}
+              options={["bar", "pie"]}
+            />
+          }
+        >
+          {lowestChart === "bar" ? (
+            <ResponsiveContainer width="100%" height={230}>
+              <BarChart data={lowestRevData} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="displayName" width={150} tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="value" name="pedidos" radius={[0, 4, 4, 0]}>
+                  {lowestRevData.map((_, i) => <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <ResponsiveContainer width="100%" height={230}>
+              <PieChart>
+                <Pie data={lowestRevData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={35} paddingAngle={3}>
+                  {lowestRevData.map((_, i) => <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />)}
+                </Pie>
+                <Tooltip formatter={(v) => formatNum(Number(v))} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
       </div>
 
       {/* Directory table */}
@@ -200,7 +246,7 @@ export function RevendedoresDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {(revendedores ?? []).slice(0, 15).map((r) => (
+              {(revendedores ?? []).map((r) => (
                 <tr key={r.rev_codi} className="hover:bg-muted/40 transition-colors">
                   <td className="py-2 pr-4 text-muted-foreground font-mono">{r.rev_codi}</td>
                   <td className="py-2 pr-4 text-foreground font-medium">{r.rev_nomb}</td>
@@ -219,9 +265,9 @@ export function RevendedoresDashboard() {
               ))}
             </tbody>
           </table>
-          {(revendedores?.length ?? 0) > 15 && (
+          {(revendedores?.length ?? 0) > 0 && (
             <p className="text-xs text-muted-foreground text-center pt-3">
-              Mostrando 15 de {formatNum(revendedores?.length ?? 0)} revendedores
+              Mostrando {formatNum(revendedores?.length ?? 0)} revendedores
             </p>
           )}
         </div>

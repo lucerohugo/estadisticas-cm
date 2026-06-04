@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutDashboard, ShoppingCart, Package, Boxes, Users, Sun, Moon, LogOut } from "lucide-react"
+import { LayoutDashboard, ShoppingCart, Users, Boxes, Package, MapPin, Sun, Moon, LogOut } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
 import type { ActiveSection } from "@/app/page"
@@ -21,9 +21,10 @@ const PILLAR_ITEMS: {
   dot: string
 }[] = [
   { id: "pedidos",      icon: ShoppingCart,    label: "Pedidos",      color: "text-orange-400",  dot: "bg-orange-400" },
-  { id: "articulos",    icon: Package,         label: "Artículos",    color: "text-sky-400",     dot: "bg-sky-400" },
-  { id: "stock",        icon: Boxes,           label: "Stock",        color: "text-emerald-400", dot: "bg-emerald-400" },
   { id: "revendedores", icon: Users,           label: "Revendedores", color: "text-violet-400",  dot: "bg-violet-400" },
+  { id: "stock",        icon: Boxes,           label: "Stock",        color: "text-emerald-400", dot: "bg-emerald-400" },
+  // { id: "articulos",    icon: Package,         label: "Artículos",    color: "text-sky-400",     dot: "bg-sky-400" }, ##esto es el boton de articulos
+  { id: "provincias",   icon: MapPin,          label: "Provincias",   color: "text-pink-400",    dot: "bg-pink-400" },
 ]
 
 export function Sidebar({ active, onSelect, user, onLogout }: SidebarProps) {

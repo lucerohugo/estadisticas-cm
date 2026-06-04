@@ -5,19 +5,20 @@ import { SWRConfig } from "swr"
 import { Sidebar } from "@/components/dashboard/Sidebar"
 import { OverviewDashboard } from "@/components/dashboard/OverviewDashboard"
 import { PedidosDashboard } from "@/components/dashboard/PedidosDashboard"
-import { ArticulosDashboard } from "@/components/dashboard/ArticulosDashboard"
-import { StockDashboard } from "@/components/dashboard/StockDashboard"
 import { RevendedoresDashboard } from "@/components/dashboard/RevendedoresDashboard"
+import { StockDashboard } from "@/components/dashboard/StockDashboard"
+import { ArticulosDashboard } from "@/components/dashboard/ArticulosDashboard"
+import { ProvinciasDashboard } from "@/components/dashboard/ProvinciasDashboard"
 import { LoginForm } from "@/components/dashboard/LoginForm"
 import { getStoredUser, type User } from "@/lib/auth"
 
-export type ActiveSection = "overview" | "pedidos" | "articulos" | "stock" | "revendedores"
+export type ActiveSection = "overview" | "pedidos" | "revendedores" | "stock" | "articulos" | "provincias"
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [active, setActive] = useState<ActiveSection>("overview")
-  const [selectedRevFromOverview, setSelectedRevFromOverview] = useState<number | null>(null)
+  const [selectedRevFromOverview, setSelectedRevFromOverview] = useState<number | undefined>(undefined)
 
   useEffect(() => {
     const storedUser = getStoredUser()
@@ -59,9 +60,10 @@ export default function Home() {
         <main className="flex-1 overflow-y-auto min-w-0">
           {active === "overview"     && <OverviewDashboard onNavigate={(section, data) => { setActive(section); if (data?.selectedRev) setSelectedRevFromOverview(data.selectedRev) }} />}
           {active === "pedidos"      && <PedidosDashboard />}
-          {active === "articulos"    && <ArticulosDashboard />}
-          {active === "stock"        && <StockDashboard initialSelectedRev={selectedRevFromOverview} />}
           {active === "revendedores" && <RevendedoresDashboard />}
+          {active === "stock"        && <StockDashboard initialSelectedRev={selectedRevFromOverview} />}
+          {active === "articulos"    && <ArticulosDashboard />}
+          {active === "provincias"   && <ProvinciasDashboard />}
         </main>
       </div>
     </SWRConfig>
