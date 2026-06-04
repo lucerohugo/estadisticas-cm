@@ -113,7 +113,17 @@ export function Sidebar({ active, onSelect, user, onLogout }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-3 pb-4 pt-3 border-t border-sidebar-border flex flex-col gap-1">
+      <div className="px-3 pb-4 pt-3 flex flex-col gap-1">
+        {/* BrixSoftware branding */}
+        <div className="flex items-center gap-2 px-3 py-2 mb-2">
+          <div className="w-4 h-4 flex items-center justify-center shrink-0 rounded-sm overflow-hidden">
+            <img src="/isologo.png" alt="BrixSoftware" className="w-full h-full object-contain" />
+          </div>
+          <span className="text-[9px] text-sidebar-foreground/40 font-medium">BrixSoftware</span>
+        </div>
+
+        <div className="border-t border-sidebar-border" />
+
         {mounted && (
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
