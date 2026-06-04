@@ -38,7 +38,7 @@ export function ProvinciasDashboard() {
   const { data: localidades, isLoading: loc_loading } = useLocalidades()
   const { data: revendedores, isLoading: rev_loading } = useRevendedores()
   const { data: pedidos, isLoading: ped_loading } = usePedidos()
-  const [period, setPeriod] = useState<Period>("mes")
+  const [period, setPeriod] = useState<Period>("año")
   const [range, setRange] = useState<DateRange>(() => {
     const today = new Date().toISOString().slice(0, 10)
     return { from: today, to: today }

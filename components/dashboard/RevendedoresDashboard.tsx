@@ -35,7 +35,7 @@ function CustomTooltip({ active, payload, label }: any) {
 export function RevendedoresDashboard() {
   const { data: revendedores, isLoading: rLoading } = useRevendedores()
   const { data: pedidos, isLoading: pLoading } = usePedidos()
-  const [period, setPeriod] = useState<Period>("mes")
+  const [period, setPeriod] = useState<Period>("año")
   const [range, setRange] = useState<DateRange>(() => {
     const today = new Date().toISOString().slice(0, 10)
     return { from: today, to: today }

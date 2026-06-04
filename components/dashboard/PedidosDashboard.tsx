@@ -44,7 +44,7 @@ export function PedidosDashboard() {
   const { data: localidades } = useLocalidades()
   const { data: provincias } = useProvincias()
   const { data: revendedores } = useRevendedores()
-  const [period, setPeriod] = useState<Period>("mes")
+  const [period, setPeriod] = useState<Period>("año")
   const [range, setRange] = useState<DateRange>(() => {
     const today = new Date().toISOString().slice(0, 10)
     return { from: today, to: today }
@@ -170,7 +170,7 @@ export function PedidosDashboard() {
     if (topProvince) list.push(`La provincia con más ventas es ${topProvince.name}  -  (${Math.round((topProvince.value / filtered.length) * 100)}% del período).`)
     const pctExp = filtered.length > 0 ? Math.round((kpis.exportados / filtered.length) * 100) : 0
     if (pctExp < 60) list.push(`Solo el ${pctExp}% de los pedidos fueron exportados — posible cuello de botella en despacho.`)
-    else list.push(`El ${pctExp}% de los pedidos están exportados. Buen nivel de cumplimiento.`)
+    else list.push(`El ${pctExp}% de los pedidos están exportados.`)
     list.push(`Monto promedio pendiente: ${formatARS(kpis.ticketProm)}.`)
     return list
   }, [filtered, marcaData, revData, kpis, topProvince])

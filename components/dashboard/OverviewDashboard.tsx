@@ -10,7 +10,7 @@ import {
   TrendingUp, ArrowRight, CheckCircle, Clock,
 } from "lucide-react"
 import {
-  usePedidos, useArticulos, useStock, useRevendedores, useProvincias,
+  usePedidos, useArticulos, useStock, useStockTotal, useRevendedores, useProvincias,
   filterByPeriod, formatARS, formatNum, countBy,
   type Period, type DateRange,
 } from "@/lib/api"
@@ -140,10 +140,11 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
   const { data: articulos, isLoading: aLoad } = useArticulos()
   const { data: revendedores, isLoading: rLoad } = useRevendedores()
   const { data: provincias, isLoading: provLoad } = useProvincias()
+  const { data: stockTotal, isLoading: sTotalLoad } = useStockTotal()
   const [selectedRev, setSelectedRev] = useState<number | undefined>(undefined)
   const { data: stock, isLoading: sLoad } = useStock(selectedRev ?? null)
   
-  const [period, setPeriod] = useState<Period>("mes")
+  const [period, setPeriod] = useState<Period>("año")
   const [range, setRange] = useState<DateRange>(() => {
     const today = new Date().toISOString().slice(0, 10)
     return { from: today, to: today }
@@ -301,42 +302,22 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
             </p>
           </button>
         ) : (
-          <div className="bg-card rounded-2xl border border-border p-5 flex flex-col gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <Boxes size={20} className="text-emerald-500" />
-                </div>
-                <div className="w-2 h-2 rounded-full bg-emerald-400" />
+          <button
+            onClick={() => onNavigate("stock")}
+            className="bg-card rounded-2xl border border-border p-5 text-left hover:shadow-md transition-shadow group"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <Boxes size={20} className="text-emerald-500" />
               </div>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Stock</p>
-              <p className="text-xs text-muted-foreground mt-4 mb-4">Selecciona un revendedor para ver stock</p>
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
             </div>
-            <div className="flex gap-2 items-center flex-wrap">
-              <button
-                onClick={() => setSelectedRev(undefined)}
-                className={`px-4 py-2 rounded-lg border transition-colors font-medium text-sm ${
-                  selectedRev === undefined
-                    ? "bg-emerald-500 text-white border-emerald-600"
-                    : "border-border hover:bg-accent"
-                }`}
-              >
-                Todos
-              </button>
-              <Select value={selectedRev !== undefined ? String(selectedRev) : ""} onValueChange={(val) => setSelectedRev(val ? parseInt(val) : undefined)}>
-                <SelectTrigger className="flex-1 min-w-[200px]">
-                  <SelectValue placeholder="Seleccionar revendedor..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-80">
-                  {revendedores?.map((rev) => (
-                    <SelectItem key={rev.rev_codi} value={rev.rev_codi.toString()}>
-                      {rev.rev_nomb}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Stock</p>
+            <p className="text-3xl font-bold text-foreground mt-1">{formatNum(stockTotal?.total ?? 0)}</p>
+            <p className="text-xs text-muted-foreground mt-2 group-hover:text-primary transition-colors">
+              Ver detalle <ArrowRight size={10} className="inline ml-1" />
+            </p>
+          </button>
         )}
 
         <button
@@ -393,15 +374,15 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       </Section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 2: ANÁLISIS - Charts side by side
+          SECTION 2: ANÁLISIS Y RESUMEN - Por marca, Artículos, Revendedores
          ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Por marca */}
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <div className="h-1 bg-orange-400" />
           <div className="p-5">
             <h3 className="text-sm font-semibold text-foreground mb-1">Por marca</h3>
-            <p className="text-xs text-muted-foreground mb-4">distribución del período</p>
+            <p className="text-xs text-muted-foreground mb-4">Marcas seleccionadas en pedidos</p>
             <div className="space-y-3">
               {marcaData.map((item, i) => (
                 <div key={item.name} className="flex items-center gap-3">
@@ -421,53 +402,6 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
             </div>
           </div>
         </div>
-
-        {/* Forma de pago */}
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div className="h-1 bg-blue-400" />
-          <div className="p-5">
-            <h3 className="text-sm font-semibold text-foreground mb-1">Forma de pago</h3>
-            <p className="text-xs text-muted-foreground mb-4">composición</p>
-            <div className="flex items-center gap-6">
-              <div style={{ width: 140, height: 140 }}>
-                <PieChart width={140} height={140}>
-                  <Pie
-                    data={financieraData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={60}
-                    innerRadius={35}
-                    paddingAngle={3}
-                  >
-                    {financieraData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </div>
-              <div className="flex-1 space-y-2">
-                {financieraData.map((item, i) => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                    />
-                    <span className="text-xs text-muted-foreground flex-1 truncate">{item.name}</span>
-                    <span className="text-xs font-medium text-foreground">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 3: RESUMEN RÁPIDO - Articulos, Stock, Revendedores
-         ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Artículos */}
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <div className="h-1 bg-sky-400" />
@@ -498,87 +432,6 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
               <div className="bg-muted/50 rounded-xl p-3 text-center">
                 <p className="text-lg font-bold text-foreground">{formatNum(new Set(articulos?.map(a => a.rub_nomb)).size)}</p>
                 <p className="text-[10px] text-muted-foreground">rubros</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stock */}
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div className="h-1 bg-emerald-400" />
-          <div className="p-5">
-            <div className="space-y-4">
-              {/* Selector de Revendedor */}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-2 uppercase">Selecciona revendedor:</label>
-                <Select value={selectedRev !== undefined ? String(selectedRev) : ""} onValueChange={(val) => setSelectedRev(val ? parseInt(val) : undefined)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Elige un revendedor..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-96">
-                    {revendedores?.map((rev) => (
-                      <SelectItem key={rev.rev_codi} value={rev.rev_codi.toString()}>
-                        {rev.rev_nomb}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Header + Datos */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-foreground">Stock</h3>
-                  <button
-                    onClick={() => onNavigate("stock", { selectedRev })}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Ver más
-                  </button>
-                </div>
-                
-                {selectedRev === undefined ? (
-                  <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <Boxes size={28} className="text-muted-foreground/50 mb-2" />
-                    <p className="text-xs text-muted-foreground">Selecciona un revendedor arriba para ver stock</p>
-                  </div>
-                ) : (
-                  <>
-                    {sLoad ? (
-                      <div className="flex items-center justify-center py-6">
-                        <div className="text-center">
-                          <div className="w-6 h-6 border-3 border-emerald-400/20 border-t-emerald-400 rounded-full animate-spin mx-auto mb-2" />
-                          <p className="text-xs text-muted-foreground">Cargando...</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-4 mb-4">
-                          <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                            <Boxes size={20} className="text-emerald-500" />
-                          </div>
-                          <div>
-                            <p className="text-xl font-bold text-foreground">{formatNum(kpis.totalStock)}</p>
-                            <p className="text-xs text-muted-foreground">unidades</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">Disponibles</span>
-                            <span className="font-medium text-foreground">{kpis.porcentajeDisp}%</span>
-                          </div>
-                          <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-emerald-400 rounded-full transition-all duration-500"
-                              style={{ width: `${kpis.porcentajeDisp}%` }}
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">{formatNum(kpis.disponibles)} disponibles</p>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
               </div>
             </div>
           </div>

@@ -41,7 +41,7 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
   const { data: revendedores } = useRevendedores()
   const [selectedRev, setSelectedRev] = useState<number | null>(initialSelectedRev ?? null)
   const [destChart, setDestChart] = useState<ChartType>("pie")
-  const [period, setPeriod] = useState<Period>("mes")
+  const [period, setPeriod] = useState<Period>("año")
   const [range, setRange] = useState<DateRange>(() => {
     const today = new Date().toISOString().slice(0, 10)
     return { from: today, to: today }
@@ -76,9 +76,20 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
 
   const kpis = useMemo(() => {
     const total = filteredStock?.length ?? 0
-    const disponibles = filteredStock?.filter((s) => s.art_bdis === "S" || s.art_bdis === null).length ?? 0
+    const disponibles = filteredStock?.filter((s) => !s.art_bdis || s.art_bdis === "").length ?? 0
     const usados = filteredStock?.filter((s) => s.art_usad !== null && s.art_usad !== "").length ?? 0
-    return { total, disponibles, usados }
+    
+    // Para TODOS: artículos únicos y variantes
+    const uniqueArticles = new Set(filteredStock?.map(s => s.art_codi))
+    const uniqueVariants = new Set(filteredStock?.map(s => s.col_codi))
+    
+    return { 
+      total, 
+      disponibles, 
+      usados,
+      uniqueArticles: uniqueArticles.size,
+      uniqueVariants: uniqueVariants.size,
+    }
   }, [filteredStock])
 
   // Group by disponibilidad
@@ -123,6 +134,41 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
       .slice(-12)
   }, [filteredStock])
 
+  // Top 10 artículos más en stock (para TODOS)
+  const topArticlesData = useMemo(() => {
+    const map = new Map<number, { artCodi: number; artNmot: string; cantidad: number }>()
+    for (const s of filteredStock ?? []) {
+      // Solo contar artículos disponibles (art_bdis vacío o null)
+      if (s.art_bdis && s.art_bdis !== "") continue
+      
+      const key = s.art_codi
+      const prev = map.get(key) ?? { artCodi: key, artNmot: s.art_nomb || "?", cantidad: 0 }
+      map.set(key, { ...prev, cantidad: prev.cantidad + 1 })
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 10)
+  }, [filteredStock])
+
+  // Top 10 colores más comunes (para TODOS)
+  const topColorsData = useMemo(() => {
+    const map = new Map<number, { colCodi: number; colNomb: string; cantidad: number }>()
+    for (const s of filteredStock ?? []) {
+      // Solo contar artículos disponibles (art_bdis vacío o null)
+      if (s.art_bdis && s.art_bdis !== "") continue
+      // Solo contar si tiene color válido
+      if (!s.col_codi) continue
+      
+      const key = s.col_codi
+      const prev = map.get(key) ?? { colCodi: key, colNomb: s.col_nomb || "?", cantidad: 0 }
+      map.set(key, { ...prev, cantidad: prev.cantidad + 1 })
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 10)
+      .map((item, i) => ({ ...item, name: item.colNomb, value: item.cantidad }))
+  }, [filteredStock])
+
   if (isLoading) {
     return (
       <div className="p-6 flex flex-col gap-6">
@@ -145,7 +191,9 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
         subtitle="Estado del inventario web en tiempo real"
       >
         <div className="flex items-center gap-4 flex-wrap">
-          <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
+          {selectedRev !== null && (
+            <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
+          )}
           <div className="flex gap-2">
             <button
               onClick={() => setSelectedRev(null)}
@@ -174,106 +222,162 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
       </SectionHeader>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
-        <KpiCard
-          label="Total unidades"
-          value={formatNum(kpis.total)}
-          sub="en sistema"
-          accent="border-l-4 border-l-emerald-400"
-          icon={Boxes}
-          iconBg="bg-emerald-50 dark:bg-emerald-950"
-        />
-        <KpiCard
-          label="Disponibles"
-          value={formatNum(kpis.disponibles)}
-          sub={`${kpis.total > 0 ? Math.round((kpis.disponibles / kpis.total) * 100) : 0}% del stock`}
-          accent="border-l-4 border-l-sky-400"
-          icon={CheckSquare}
-          iconBg="bg-sky-50 dark:bg-sky-950"
-        />
-      </div>
+      {selectedRev === null ? (
+        // TODOS: Total unidades + Disponibles
+        <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
+          <KpiCard
+            label="Total unidades"
+            value={formatNum(kpis.total)}
+            sub="en todo el stock"
+            accent="border-l-4 border-l-emerald-400"
+            icon={Boxes}
+            iconBg="bg-emerald-50 dark:bg-emerald-950"
+          />
+          <KpiCard
+            label="Unidades disponibles"
+            value={formatNum(kpis.disponibles)}
+            sub={`${kpis.total > 0 ? Math.round((kpis.disponibles / kpis.total) * 100) : 0}% del total`}
+            accent="border-l-4 border-l-sky-400"
+            icon={CheckSquare}
+            iconBg="bg-sky-50 dark:bg-sky-950"
+          />
+        </div>
+      ) : (
+        // REVENDEDOR: Solo Total unidades
+        <div className="grid grid-cols-1 gap-4">
+          <KpiCard
+            label="Total unidades disponibles"
+            value={formatNum(kpis.total)}
+            sub="en stock"
+            accent="border-l-4 border-l-emerald-400"
+            icon={Boxes}
+            iconBg="bg-emerald-50 dark:bg-emerald-950"
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4">
-        {/* Disponibilidad donut */}
-        <ChartCard
-          title="Estado de disponibilidad"
-          accentBar="bg-emerald-400"
-          toolbar={
-            <ChartTypeSwitcher
-              value={destChart}
-              onChange={setDestChart}
-              options={["pie", "bar"]}
-            />
-          }
-        >
-          {destChart === "pie" ? (
-            <ResponsiveContainer width="100%" height={230}>
-              <PieChart>
-                <Pie
-                  data={destinoData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={85}
-                  innerRadius={45}
-                  paddingAngle={4}
-                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                  labelLine={false}
+        {selectedRev === null ? (
+          <>
+            {/* Top 10 artículos - COMENTADO POR AHORA */}
+            {false && (
+              <ChartCard title="Top 10 artículos más en stock" accentBar="bg-emerald-400">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart
+                    data={topArticlesData}
+                    margin={{ top: 4, right: 8, left: 0, bottom: 80 }}
+                    layout="vertical"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
+                    <YAxis
+                      type="category"
+                      dataKey="artNmot"
+                      tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={150}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="cantidad" name="unidades" fill={COLORS[2]} radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            )}
+
+            {/* Top 10 colores - COMENTADO POR AHORA */}
+            {false && (
+              <ChartCard title="Top 10 colores más comunes" accentBar="bg-sky-400">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart
+                    data={topColorsData}
+                    margin={{ top: 4, right: 8, left: 0, bottom: 80 }}
+                    layout="vertical"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={120}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="value" name="unidades" fill={COLORS[4]} radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            )}
+
+            {/* Tabla de artículos */}
+            <ChartCard title="Ranking de artículos" accentBar="bg-amber-400">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="py-2.5 pr-3 text-left text-muted-foreground font-medium">#</th>
+                      <th className="py-2.5 pr-3 text-left text-muted-foreground font-medium">Artículo</th>
+                      <th className="py-2.5 text-right text-muted-foreground font-medium">Unidades</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {topArticlesData.map((item, idx) => (
+                      <tr key={item.artCodi} className="hover:bg-muted/40 transition-colors">
+                        <td className="py-2.5 pr-3 text-muted-foreground font-mono">{idx + 1}</td>
+                        <td className="py-2.5 pr-3 text-foreground font-medium truncate">{item.artNmot}</td>
+                        <td className="py-2.5 text-right font-medium text-foreground">{formatNum(item.cantidad)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ChartCard>
+          </>
+        ) : (
+          <>
+            {/* Top artículos del revendedor */}
+            <ChartCard title="Algunos artículos en stock" accentBar="bg-emerald-400">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={topArticlesData}
+                  margin={{ top: 4, right: 8, left: 0, bottom: 80 }}
+                  layout="vertical"
                 >
-                  <Cell fill={COLORS[2]} />
-                  <Cell fill={COLORS[5]} />
-                  <Cell fill={COLORS[3]} />
-                </Pie>
-                <Tooltip formatter={(v) => formatNum(Number(v))} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <ResponsiveContainer width="100%" height={230}>
-              <BarChart data={destinoData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="artNmot"
+                    tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={150}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="cantidad" name="unidades" fill={COLORS[2]} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </>
+        )}
+
+        {/* Ingreso mensual (solo cuando hay revendedor seleccionado) */}
+        {selectedRev !== null && (
+          <ChartCard title="Ingreso de unidades al stock por mes" accentBar="bg-amber-400">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={monthlyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name="unidades" radius={[4, 4, 0, 0]}>
-                  <Cell fill={COLORS[2]} />
-                  <Cell fill={COLORS[5]} />
-                  <Cell fill={COLORS[3]} />
-                </Bar>
-              </BarChart>
+                <Line type="monotone" dataKey="cantidad" name="unidades" stroke={COLORS[2]} strokeWidth={2.5} dot={{ r: 3, fill: COLORS[2] }} activeDot={{ r: 5 }} />
+              </LineChart>
             </ResponsiveContainer>
-          )}
-        </ChartCard>
-
-        {/* Nuevos vs usados stacked */}
-        {/* <ChartCard title="Nuevos vs. usados por mes" accentBar="bg-sky-400">
-          <ResponsiveContainer width="100%" height={230}>
-            <BarChart data={usadoData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="nuevos" name="Nuevos" stackId="a" fill={COLORS[2]} />
-              <Bar dataKey="usados" name="Usados" stackId="a" fill={COLORS[3]} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard> */}
+          </ChartCard>
+        )}
       </div>
-
-      {/* Ingreso mensual */}
-      <ChartCard title="Ingreso de unidades al stock por mes" accentBar="bg-amber-400">
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={monthlyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
-            <Tooltip content={<CustomTooltip />} />
-            <Line type="monotone" dataKey="cantidad" name="unidades" stroke={COLORS[2]} strokeWidth={2.5} dot={{ r: 3, fill: COLORS[2] }} activeDot={{ r: 5 }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </ChartCard>
     </div>
   )
 }
