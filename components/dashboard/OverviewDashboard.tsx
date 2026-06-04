@@ -14,7 +14,7 @@ import {
   filterByPeriod, formatARS, formatNum, countBy,
   type Period, type DateRange,
 } from "@/lib/api"
-import { SkeletonCard, COLORS } from "./shared"
+import { SkeletonCard, COLORS, PeriodTabs } from "./shared"
 import {
   Select,
   SelectContent,
@@ -25,15 +25,10 @@ import {
 import type { ActiveSection } from "@/app/page"
 
 interface OverviewDashboardProps {
-  onNavigate: (s: ActiveSection) => void
+  onNavigate: (s: ActiveSection, data?: { selectedRev?: number }) => void
 }
 
-const PERIOD_OPTIONS: { id: Period; label: string }[] = [
-  { id: "dia", label: "Día" },
-  { id: "semana", label: "Semana" },
-  { id: "mes", label: "Mes" },
-  { id: "año", label: "Año" },
-]
+// PERIOD_OPTIONS no se usa más, PeriodTabs maneja los períodos
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SMALL KPI BOX - Uniform size for all metrics
@@ -238,26 +233,11 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       {/* ═══════════════════════════════════════════════════════════════════════
           HEADER
          ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-center justify-between gap-4 flex-wrap pb-5 border-b border-border">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Resumen General</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Período: {periodLabel}</p>
         </div>
-        <div className="inline-flex bg-muted rounded-lg p-0.5">
-          {PERIOD_OPTIONS.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setPeriod(p.id)}
-              className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
-                period === p.id
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -298,22 +278,61 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
           </p>
         </button>
 
-        <button
-          onClick={() => onNavigate("stock")}
-          className="bg-card rounded-2xl border border-border p-5 text-left hover:shadow-md transition-shadow group"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-              <Boxes size={20} className="text-emerald-500" />
+        {selectedRev !== null ? (
+          <button
+            onClick={() => onNavigate("stock", { selectedRev })}
+            className="bg-card rounded-2xl border border-border p-5 text-left hover:shadow-md transition-shadow group"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <Boxes size={20} className="text-emerald-500" />
+              </div>
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
             </div>
-            <div className="w-2 h-2 rounded-full bg-emerald-400" />
+            <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Stock</p>
+            <p className="text-3xl font-bold text-foreground mt-1">{formatNum(kpis.totalStock)}</p>
+            <p className="text-xs text-muted-foreground mt-2 group-hover:text-primary transition-colors">
+              Ver detalle <ArrowRight size={10} className="inline ml-1" />
+            </p>
+          </button>
+        ) : (
+          <div className="bg-card rounded-2xl border border-border p-5 flex flex-col gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <Boxes size={20} className="text-emerald-500" />
+                </div>
+                <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              </div>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Stock</p>
+              <p className="text-xs text-muted-foreground mt-4 mb-4">Selecciona un revendedor para ver stock</p>
+            </div>
+            <div className="flex gap-2 items-center flex-wrap">
+              <button
+                onClick={() => setSelectedRev(null)}
+                className={`px-4 py-2 rounded-lg border transition-colors font-medium text-sm ${
+                  selectedRev === null
+                    ? "bg-emerald-500 text-white border-emerald-600"
+                    : "border-border hover:bg-accent"
+                }`}
+              >
+                Todos
+              </button>
+              <Select value={selectedRev ? selectedRev.toString() : ""} onValueChange={(val) => setSelectedRev(parseInt(val))}>
+                <SelectTrigger className="flex-1 min-w-[200px]">
+                  <SelectValue placeholder="Seleccionar revendedor..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-80">
+                  {revendedores?.map((rev) => (
+                    <SelectItem key={rev.rev_codi} value={rev.rev_codi.toString()}>
+                      {rev.rev_nomb}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Stock</p>
-          <p className="text-3xl font-bold text-foreground mt-1">{formatNum(kpis.totalStock)}</p>
-          <p className="text-xs text-muted-foreground mt-2 group-hover:text-primary transition-colors">
-            Ver detalle <ArrowRight size={10} className="inline ml-1" />
-          </p>
-        </button>
+        )}
 
         <button
           onClick={() => onNavigate("revendedores")}
@@ -362,7 +381,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
           <SmallKpi
             label="Pendientes"
             value={formatNum(kpis.pendientes)}
-            sub={`ticket prom. ${formatARS(kpis.ticketProm)}`}
+            sub={`monto prom. ${formatARS(kpis.ticketProm)}`}
             trend={kpis.trendPend}
             borderColor="border-l-amber-400"
           />
@@ -507,7 +526,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-semibold text-foreground">Stock</h3>
                   <button
-                    onClick={() => onNavigate("stock")}
+                    onClick={() => onNavigate("stock", { selectedRev })}
                     className="text-xs text-primary hover:underline"
                   >
                     Ver más

@@ -17,6 +17,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [active, setActive] = useState<ActiveSection>("overview")
+  const [selectedRevFromOverview, setSelectedRevFromOverview] = useState<number | null>(null)
 
   useEffect(() => {
     const storedUser = getStoredUser()
@@ -56,10 +57,10 @@ export default function Home() {
       <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar active={active} onSelect={setActive} user={user} onLogout={handleLogout} />
         <main className="flex-1 overflow-y-auto min-w-0">
-          {active === "overview"     && <OverviewDashboard onNavigate={setActive} />}
+          {active === "overview"     && <OverviewDashboard onNavigate={(section, data) => { setActive(section); if (data?.selectedRev) setSelectedRevFromOverview(data.selectedRev) }} />}
           {active === "pedidos"      && <PedidosDashboard />}
           {active === "articulos"    && <ArticulosDashboard />}
-          {active === "stock"        && <StockDashboard />}
+          {active === "stock"        && <StockDashboard initialSelectedRev={selectedRevFromOverview} />}
           {active === "revendedores" && <RevendedoresDashboard />}
         </main>
       </div>

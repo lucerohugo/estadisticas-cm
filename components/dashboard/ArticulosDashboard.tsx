@@ -109,10 +109,9 @@ export function ArticulosDashboard() {
         iconColor="bg-sky-500"
         title="Artículos"
         subtitle={`Catálogo completo de productos`}
-      />
-
-      {/* Controles: Período */}
-      <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
+      >
+        <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
+      </SectionHeader>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

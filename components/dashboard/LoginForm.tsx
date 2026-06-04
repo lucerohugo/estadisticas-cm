@@ -38,8 +38,8 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg mb-4">
-            <span className="text-2xl font-bold text-primary-foreground">CM</span>
+          <div className="w-36 h-36 flex items-center justify-center mb-4 rounded-[32px] overflow-hidden">
+            <img src="/logocm250.png" alt="Centro Motos" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-xl font-bold text-foreground">Centro Motos</h1>
           <p className="text-sm text-muted-foreground mt-1">Panel de gestión</p>
@@ -127,7 +127,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
 
         {/* Footer */}
         <p className="text-center text-[10px] text-muted-foreground mt-6">
-          © {new Date().getFullYear()} Centro Motos. Todos los derechos reservados.
+          © {new Date().getFullYear()} - Todos los derechos reservados.
         </p>
       </div>
     </div>

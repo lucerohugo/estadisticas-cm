@@ -43,8 +43,8 @@ export function Sidebar({ active, onSelect, user, onLogout }: SidebarProps) {
     <aside className="flex flex-col w-56 shrink-0 bg-sidebar h-full border-r border-sidebar-border">
       {/* Logo */}
       <div className="flex items-center gap-3 h-16 px-5 border-b border-sidebar-border">
-        <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-          <span className="text-xs font-bold text-primary-foreground">CM</span>
+        <div className="w-11 h-11 flex items-center justify-center shrink-0 rounded-[16px] overflow-hidden">
+          <img src="/logocm250.png" alt="Centro Motos" className="w-full h-full object-contain" />
         </div>
         <div>
           <p className="text-sm font-bold text-sidebar-foreground leading-none">Centro Motos</p>

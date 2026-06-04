@@ -158,7 +158,7 @@ export function PedidosDashboard() {
         <KpiCard
           label="Pendientes"
           value={formatNum(kpis.pendientes)}
-          sub={`Ticket prom. ${formatARS(kpis.ticketProm)}`}
+          sub={`monto prom. ${formatARS(kpis.ticketProm)}`}
           accent="border-l-4 border-l-amber-400"
           icon={Clock}
           iconBg="bg-amber-50 dark:bg-amber-950"

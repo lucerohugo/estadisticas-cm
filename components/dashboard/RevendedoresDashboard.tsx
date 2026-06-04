@@ -7,11 +7,11 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { Users, UserCheck, UserX, MapPin } from "lucide-react"
-import { useRevendedores, usePedidos, countBy, filterByPeriod, formatNum } from "@/lib/api"
+import { useRevendedores, usePedidos, countBy, filterByPeriod, formatNum, type Period, type DateRange } from "@/lib/api"
 import {
   SectionHeader, PeriodTabs, ChartTypeSwitcher, KpiCard,
   ChartCard, SkeletonCard, SkeletonChart, COLORS,
-  type ChartType, type Period,
+  type ChartType,
 } from "./shared"
 
 function CustomTooltip({ active, payload, label }: any) {
@@ -36,6 +36,10 @@ export function RevendedoresDashboard() {
   const { data: revendedores, isLoading: rLoading } = useRevendedores()
   const { data: pedidos, isLoading: pLoading } = usePedidos()
   const [period, setPeriod] = useState<Period>("mes")
+  const [range, setRange] = useState<DateRange>(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    return { from: today, to: today }
+  })
   const [topChart, setTopChart] = useState<ChartType>("bar")
 
   const isLoading = rLoading || pLoading
@@ -49,8 +53,8 @@ export function RevendedoresDashboard() {
   }, [revendedores])
 
   const filteredPedidos = useMemo(() =>
-    filterByPeriod(pedidos ?? [], period, undefined),
-  [pedidos, period])
+    filterByPeriod(pedidos ?? [], period, range),
+  [pedidos, period, range])
 
   // Top revendedores por pedidos en el período
   const topRevData = useMemo(() =>
@@ -87,7 +91,7 @@ export function RevendedoresDashboard() {
         title="Revendedores"
         subtitle={`Red de distribución — ${formatNum(kpis.total)} revendedores registrados`}
       >
-        <PeriodTabs value={period} onChange={setPeriod} />
+        <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
       </SectionHeader>
 
       {/* KPIs */}

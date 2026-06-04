@@ -37,9 +37,9 @@ function CustomTooltip({ active, payload, label }: any) {
   )
 }
 
-export function StockDashboard() {
+export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: number | null }) {
   const { data: revendedores } = useRevendedores()
-  const [selectedRev, setSelectedRev] = useState<number | null>(null)
+  const [selectedRev, setSelectedRev] = useState<number | null>(initialSelectedRev ?? null)
   const [destChart, setDestChart] = useState<ChartType>("pie")
   const [period, setPeriod] = useState<Period>("mes")
   const [range, setRange] = useState<DateRange>(() => {
@@ -143,18 +143,13 @@ export function StockDashboard() {
         iconColor="bg-emerald-500"
         title="Stock"
         subtitle="Estado del inventario web en tiempo real"
-      />
-
-      {/* Controles: Período + Revendedor */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
-        
-        <div className="w-full md:w-96 space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Filtrar por revendedor:</label>
+      >
+        <div className="flex items-center gap-4 flex-wrap">
+          <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
           <div className="flex gap-2">
             <button
               onClick={() => setSelectedRev(null)}
-              className={`flex-shrink-0 px-4 py-2 rounded-lg border transition-colors font-medium ${
+              className={`flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
                 selectedRev === null
                   ? "bg-emerald-500 text-white border-emerald-600"
                   : "border-border hover:bg-accent"
@@ -163,8 +158,8 @@ export function StockDashboard() {
               Todos
             </button>
             <Select value={selectedRev ? selectedRev.toString() : ""} onValueChange={(val) => setSelectedRev(parseInt(val))}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Seleccionar revendedor..." />
+              <SelectTrigger className="w-48 h-8 text-xs">
+                <SelectValue placeholder="Revendedor..." />
               </SelectTrigger>
               <SelectContent className="max-h-96">
                 {revendedores?.map((rev) => (
@@ -176,7 +171,7 @@ export function StockDashboard() {
             </Select>
           </div>
         </div>
-      </div>
+      </SectionHeader>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
