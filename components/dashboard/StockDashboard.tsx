@@ -200,7 +200,7 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
         icon={Boxes}
         iconColor="bg-emerald-500"
         title="Stock"
-        subtitle="Estado del inventario web en tiempo real"
+        subtitle="Estado del inventario web"
       >
         <div className="flex items-center gap-4 flex-wrap">
           {selectedRev !== null && (
