@@ -277,7 +277,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
             </div>
             <div className="w-2 h-2 rounded-full bg-pink-400" />
           </div>
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Provincias</p>
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Puntos de Venta</p>
           <p className="text-3xl font-bold text-foreground mt-1">{formatNum(kpis.totalProvincias)}</p>
           <p className="text-xs text-muted-foreground mt-2 group-hover:text-primary transition-colors">
             Ver detalle <ArrowRight size={10} className="inline ml-1" />

@@ -165,8 +165,8 @@ export function ProvinciasDashboard() {
       <SectionHeader
         icon={MapPin}
         iconColor="bg-pink-500"
-        title="Provincias"
-        subtitle={`Análisis de ventas por región — ${formatNum(kpis.totalProvincias)} provincias registradas`}
+        title="Puntos de Venta"
+        subtitle={`Análisis de ventas por región — ${formatNum(kpis.totalProvincias)} Puntos de Venta registrados`}
       >
         <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
       </SectionHeader>
@@ -174,9 +174,9 @@ export function ProvinciasDashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          label="Total provincias"
+          label="Total Puntos de Venta"
           value={formatNum(kpis.totalProvincias)}
-          sub="registradas"
+          sub="registrados"
           accent="border-l-4 border-l-pink-400"
           icon={MapPin}
           iconBg="bg-pink-50 dark:bg-pink-950"
@@ -190,7 +190,7 @@ export function ProvinciasDashboard() {
           iconBg="bg-emerald-50 dark:bg-emerald-950"
         />
         <KpiCard
-          label="Top provincia"
+          label="Top Punto de Venta"
           value={kpis.topProvince.name}
           sub={`${formatNum(kpis.topProvince.value)} pedidos`}
           accent="border-l-4 border-l-blue-400"
@@ -211,7 +211,7 @@ export function ProvinciasDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Mayor Venta */}
         <ChartCard
-          title="Mayor Venta por provincia"
+          title="Mayor ventas por Punto de Venta"
           accentBar="bg-pink-400"
           toolbar={
             <ChartTypeSwitcher
@@ -268,7 +268,7 @@ export function ProvinciasDashboard() {
 
         {/* Menor Venta */}
         <ChartCard
-          title="Menor venta por provincia"
+          title="Menor ventas por Punto de Venta"
           accentBar="bg-cyan-400"
           toolbar={
             <ChartTypeSwitcher
@@ -328,13 +328,13 @@ export function ProvinciasDashboard() {
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         <div className="h-1 bg-pink-400" />
         <div className="p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Ranking de provincias</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4">Ranking de Puntos de Venta</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border">
                   <th className="py-2.5 pr-4 text-left text-muted-foreground font-medium">Posición</th>
-                  <th className="py-2.5 pr-4 text-left text-muted-foreground font-medium">Provincia - Localidad</th>
+                  <th className="py-2.5 pr-4 text-left text-muted-foreground font-medium">Punto de Venta - Localidad</th>
                   <th className="py-2.5 pr-4 text-right text-muted-foreground font-medium">Pedidos</th>
                   <th className="py-2.5 text-right text-muted-foreground font-medium">% del total</th>
                 </tr>
