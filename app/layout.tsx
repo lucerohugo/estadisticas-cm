@@ -10,7 +10,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: 'Centro Motos — Datos',
   description: 'Panel de control de gestión de pedidos, stock, artículos y revendedores',
-  generator: 'v0.app',
+  generator: '',
   icons: {
     icon: '/isologo.png',
     apple: '/apple-icon.png',

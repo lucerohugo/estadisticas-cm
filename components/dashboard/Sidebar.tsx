@@ -22,7 +22,7 @@ const PILLAR_ITEMS: {
 }[] = [
   { id: "pedidos",      icon: ShoppingCart,    label: "Pedidos",      color: "text-orange-400",  dot: "bg-orange-400" },
   { id: "revendedores", icon: Users,           label: "Revendedores", color: "text-violet-400",  dot: "bg-violet-400" },
-  { id: "stock",        icon: Boxes,           label: "Stock",        color: "text-emerald-400", dot: "bg-emerald-400" },
+  { id: "stock",        icon: Boxes,           label: "Stock Revendedores",        color: "text-emerald-400", dot: "bg-emerald-400" },
   // { id: "articulos",    icon: Package,         label: "Artículos",    color: "text-sky-400",     dot: "bg-sky-400" }, ##esto es el boton de articulos
   { id: "provincias",   icon: MapPin,          label: "Puntos de Venta",   color: "text-pink-400",    dot: "bg-pink-400" },
 ]
@@ -119,7 +119,7 @@ export function Sidebar({ active, onSelect, user, onLogout }: SidebarProps) {
           <div className="w-4 h-4 flex items-center justify-center shrink-0 rounded-sm overflow-hidden">
             <img src="/isologo.png" alt="BrixSoftware" className="w-full h-full object-contain" />
           </div>
-          <span className="text-[9px] text-sidebar-foreground/40 font-medium">BrixSoftware</span>
+          <span className="text-[11px] text-sidebar-foreground/40 font-medium">BrixSoftware</span>
         </div>
 
         <div className="border-t border-sidebar-border" />

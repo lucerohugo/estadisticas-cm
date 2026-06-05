@@ -10,7 +10,7 @@ import {
   TrendingUp, ArrowRight, CheckCircle, Clock,
 } from "lucide-react"
 import {
-  usePedidos, useArticulos, useStock, useStockTotal, useRevendedores, useProvincias,
+  usePedidos, useArticulos, useStock, useStockTotal, useRevendedores, useProvincias, useLocalidades,
   filterByPeriod, formatARS, formatNum, countBy,
   type Period, type DateRange,
 } from "@/lib/api"
@@ -140,6 +140,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
   const { data: articulos, isLoading: aLoad } = useArticulos()
   const { data: revendedores, isLoading: rLoad } = useRevendedores()
   const { data: provincias, isLoading: provLoad } = useProvincias()
+  const { data: localidades, isLoading: locLoad } = useLocalidades()
   const { data: stockTotal, isLoading: sTotalLoad } = useStockTotal()
   const [selectedRev, setSelectedRev] = useState<number | undefined>(undefined)
   const { data: stock, isLoading: sLoad } = useStock(selectedRev ?? null)
@@ -150,7 +151,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
     return { from: today, to: today }
   })
 
-  const isLoading = pLoad || aLoad || (selectedRev !== undefined ? sLoad : false) || rLoad || provLoad
+  const isLoading = pLoad || aLoad || (selectedRev !== undefined ? sLoad : false) || rLoad || provLoad || locLoad
 
   // Current period pedidos
   const thisPeriod = useMemo(() => filterByPeriod(pedidos ?? [], period, range), [pedidos, period, range])
@@ -181,8 +182,41 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
     const totalArticulos = articulos?.length ?? 0
     const totalMarcas = new Set(articulos?.map((a) => a.mar_nomb)).size
 
-    // Provincias
+    // Provincias - Calcular con ventas
     const totalProvincias = provincias?.length ?? 0
+    
+    // Crear mapas para cálculo de provincias con ventas
+    const revToLocMap = new Map<number, number>()
+    if (revendedores) {
+      revendedores.forEach((rev) => {
+        if (rev.loc_codi !== null && rev.loc_codi !== undefined) {
+          revToLocMap.set(rev.rev_codi, rev.loc_codi)
+        }
+      })
+    }
+    
+    const locToProvinceMap = new Map<number, number>()
+    if (localidades) {
+      localidades.forEach((loc) => {
+        locToProvinceMap.set(loc.loc_codi, loc.pci_codi)
+      })
+    }
+    
+    // Contar pares provincia-localidad con ventas
+    const provinciasWithSalesSet = new Set<string>()
+    if (thisPeriod && revendedores) {
+      thisPeriod.forEach((p) => {
+        const revCode = p.rev_codi
+        const locCode = revToLocMap.get(revCode)
+        if (locCode !== undefined) {
+          const pciCode = locToProvinceMap.get(locCode)
+          if (pciCode !== undefined) {
+            const key = `${pciCode}-${locCode}`
+            provinciasWithSalesSet.add(key)
+          }
+        }
+      })
+    }
 
     // Stock
     const totalStock = stock?.length ?? 0
@@ -197,11 +231,11 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       totalPedidos, montoMes, exportados, pendientes, ticketProm,
       trendPedidos, trendMonto, trendExp, trendPend,
       totalArticulos, totalMarcas,
-      totalProvincias,
+      totalProvincias, provinciasConVentas: provinciasWithSalesSet.size,
       totalStock, disponibles, porcentajeDisp,
       totalRev, revActivos,
     }
-  }, [thisPeriod, lastMes, articulos, stock, revendedores, provincias])
+  }, [thisPeriod, lastMes, articulos, stock, revendedores, provincias, localidades])
 
   // Chart data
   const marcaData = useMemo(() => countBy(thisPeriod, "mar_nomb").slice(0, 5), [thisPeriod])
@@ -247,9 +281,9 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          PILARES OVERVIEW - 4 cards in a row
+          PILARES OVERVIEW - 3 cards in a row
          ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <button
           onClick={() => onNavigate("pedidos")}
           className="bg-card rounded-2xl border border-border p-5 text-left hover:shadow-md transition-shadow group"
@@ -277,48 +311,12 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
             </div>
             <div className="w-2 h-2 rounded-full bg-pink-400" />
           </div>
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Puntos de Venta</p>
-          <p className="text-3xl font-bold text-foreground mt-1">{formatNum(kpis.totalProvincias)}</p>
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Puntos de Venta con ventas</p>
+          <p className="text-3xl font-bold text-foreground mt-1">{formatNum(kpis.provinciasConVentas)}</p>
           <p className="text-xs text-muted-foreground mt-2 group-hover:text-primary transition-colors">
             Ver detalle <ArrowRight size={10} className="inline ml-1" />
           </p>
         </button>
-
-        {selectedRev !== undefined ? (
-          <button
-            onClick={() => onNavigate("stock", { selectedRev })}
-            className="bg-card rounded-2xl border border-border p-5 text-left hover:shadow-md transition-shadow group"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <Boxes size={20} className="text-emerald-500" />
-              </div>
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
-            </div>
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Stock</p>
-            <p className="text-3xl font-bold text-foreground mt-1">{formatNum(kpis.totalStock)}</p>
-            <p className="text-xs text-muted-foreground mt-2 group-hover:text-primary transition-colors">
-              Ver detalle <ArrowRight size={10} className="inline ml-1" />
-            </p>
-          </button>
-        ) : (
-          <button
-            onClick={() => onNavigate("stock")}
-            className="bg-card rounded-2xl border border-border p-5 text-left hover:shadow-md transition-shadow group"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <Boxes size={20} className="text-emerald-500" />
-              </div>
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
-            </div>
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">Stock</p>
-            <p className="text-3xl font-bold text-foreground mt-1">{formatNum(stockTotal?.total ?? 0)}</p>
-            <p className="text-xs text-muted-foreground mt-2 group-hover:text-primary transition-colors">
-              Ver detalle <ArrowRight size={10} className="inline ml-1" />
-            </p>
-          </button>
-        )}
 
         <button
           onClick={() => onNavigate("revendedores")}

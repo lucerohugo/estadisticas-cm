@@ -166,25 +166,18 @@ export function ProvinciasDashboard() {
         icon={MapPin}
         iconColor="bg-pink-500"
         title="Puntos de Venta"
-        subtitle={`Análisis de ventas por región — ${formatNum(kpis.totalProvincias)} Puntos de Venta registrados`}
+        // subtitle={`Análisis de ventas por región — ${formatNum(kpis.totalProvincias)} Puntos de Venta registrados`}
+        subtitle={`Puntos de venta activos `}
       >
         <PeriodTabs value={period} onChange={setPeriod} range={range} onRangeChange={setRange} />
       </SectionHeader>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          label="Total Puntos de Venta"
-          value={formatNum(kpis.totalProvincias)}
-          sub="registrados"
-          accent="border-l-4 border-l-pink-400"
-          icon={MapPin}
-          iconBg="bg-pink-50 dark:bg-pink-950"
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiCard
           label="Con ventas"
           value={formatNum(kpis.provinciasConVentas)}
-          sub={`${kpis.totalProvincias > 0 ? Math.round((kpis.provinciasConVentas / kpis.totalProvincias) * 100) : 0}% del total`}
+          sub="activos"
           accent="border-l-4 border-l-emerald-400"
           icon={TrendingUp}
           iconBg="bg-emerald-50 dark:bg-emerald-950"
@@ -334,9 +327,9 @@ export function ProvinciasDashboard() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="py-2.5 pr-4 text-left text-muted-foreground font-medium">Posición</th>
-                  <th className="py-2.5 pr-4 text-left text-muted-foreground font-medium">Punto de Venta - Localidad</th>
+                  <th className="py-2.5 pr-4 text-left text-muted-foreground font-medium">Punto de Venta</th>
                   <th className="py-2.5 pr-4 text-right text-muted-foreground font-medium">Pedidos</th>
-                  <th className="py-2.5 text-right text-muted-foreground font-medium">% del total</th>
+                  
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
