@@ -374,9 +374,9 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       </Section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 2: ANÁLISIS Y RESUMEN - Por marca, Artículos, Revendedores
+          SECTION 2: ANÁLISIS Y RESUMEN - Por marca, Revendedores
          ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Por marca */}
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <div className="h-1 bg-orange-400" />
@@ -399,40 +399,6 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
                   <span className="text-xs font-medium text-foreground w-8 text-right">{item.value}</span>
                 </div>
               ))}
-            </div>
-          </div>
-        </div>
-        {/* Artículos */}
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div className="h-1 bg-sky-400" />
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-foreground">Artículos</h3>
-              <button
-                onClick={() => onNavigate("articulos")}
-                className="text-xs text-primary hover:underline"
-              >
-                Ver más
-              </button>
-            </div>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
-                <Package size={22} className="text-sky-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{formatNum(kpis.totalArticulos)}</p>
-                <p className="text-xs text-muted-foreground">en catálogo</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-muted/50 rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-foreground">{formatNum(kpis.totalMarcas)}</p>
-                <p className="text-[10px] text-muted-foreground">marcas</p>
-              </div>
-              <div className="bg-muted/50 rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-foreground">{formatNum(new Set(articulos?.map(a => a.rub_nomb)).size)}</p>
-                <p className="text-[10px] text-muted-foreground">rubros</p>
-              </div>
             </div>
           </div>
         </div>
