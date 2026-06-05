@@ -53,6 +53,7 @@ export function PedidosDashboard() {
   const [marcaChartType, setMarcaChartType] = useState<ChartType>("bar")
   const [revChartType, setRevChartType] = useState<ChartType>("bar")
   const [finChartType, setFinChartType] = useState<ChartType>("pie")
+  const [colorChartType, setColorChartType] = useState<ChartType>("pie")
 
   const filtered = useMemo(
     () => filterByPeriod(pedidos ?? [], period, range),
@@ -392,15 +393,31 @@ export function PedidosDashboard() {
           )}
         </ChartCard>
 
-        <ChartCard title="Colores más pedidos" accentBar="bg-amber-400">
+        <ChartCard 
+          title="Colores más pedidos" 
+          accentBar="bg-amber-400"
+          toolbar={<ChartTypeSwitcher value={colorChartType} onChange={setColorChartType} options={["pie", "bar"]} />}
+        >
           <ResponsiveContainer width="100%" height={230}>
-            <PieChart>
-              <Pie data={colorData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={35} paddingAngle={3}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                {colorData.map((_, i) => <Cell key={i} fill={COLORS[(i + 1) % COLORS.length]} />)}
-              </Pie>
-              <Tooltip formatter={(v) => formatNum(Number(v))} />
-            </PieChart>
+            {colorChartType === "pie" ? (
+              <PieChart>
+                <Pie data={colorData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={35} paddingAngle={3}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                  {colorData.map((_, i) => <Cell key={i} fill={COLORS[(i + 1) % COLORS.length]} />)}
+                </Pie>
+                <Tooltip formatter={(v) => formatNum(Number(v))} />
+              </PieChart>
+            ) : (
+              <BarChart data={colorData} layout="vertical" margin={{ top: 0, right: 8, left: 4, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="value" name="pedidos" radius={[0, 4, 4, 0]}>
+                  {colorData.map((_, i) => <Cell key={i} fill={COLORS[(i + 1) % COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            )}
           </ResponsiveContainer>
         </ChartCard>
       </div>

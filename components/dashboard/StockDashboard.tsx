@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, LineChart, Line,
 } from "recharts"
 import { Boxes, CheckSquare, Activity } from "lucide-react"
-import { useStock, useRevendedores, formatNum, type Period, type DateRange } from "@/lib/api"
+import { useStock, useStockTotal, useRevendedores, formatNum, type Period, type DateRange } from "@/lib/api"
 import {
   SectionHeader, PeriodTabs, ChartTypeSwitcher, KpiCard,
   ChartCard, SkeletonCard, SkeletonChart, COLORS,
@@ -49,6 +49,7 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
 
   // Pasar rev_codi a la API - ella maneja el filtrado
   const { data: stock, isLoading } = useStock(selectedRev)
+  const { data: stockTotal } = useStockTotal()
 
   const filteredStock = useMemo(() => {
     if (!stock) return []
@@ -75,7 +76,8 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
   }, [stock, period, range])
 
   const kpis = useMemo(() => {
-    const total = filteredStock?.length ?? 0
+    // Cuando selectedRev === null, usar el total de la API stock-all/total/
+    const total = selectedRev === null ? (stockTotal?.total ?? 0) : (filteredStock?.length ?? 0)
     const disponibles = filteredStock?.filter((s) => !s.art_bdis || s.art_bdis === "").length ?? 0
     const usados = filteredStock?.filter((s) => s.art_usad !== null && s.art_usad !== "").length ?? 0
     
@@ -90,7 +92,7 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
       uniqueArticles: uniqueArticles.size,
       uniqueVariants: uniqueVariants.size,
     }
-  }, [filteredStock])
+  }, [filteredStock, selectedRev, stockTotal])
 
   // Group by disponibilidad
   const destinoData = useMemo(() => {
@@ -149,6 +151,16 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
       .sort((a, b) => b.cantidad - a.cantidad)
       .slice(0, 10)
   }, [filteredStock])
+
+  // Datos de disponibilidad para gráfico
+  const availabilityData = useMemo(() => {
+    const disponibles = kpis.disponibles
+    const noDisponibles = kpis.total - kpis.disponibles
+    return [
+      { name: "Disponibles", value: disponibles, fill: COLORS[0] },
+      { name: "No disponibles", value: noDisponibles, fill: COLORS[3] },
+    ]
+  }, [kpis])
 
   // Top 10 colores más comunes (para TODOS)
   const topColorsData = useMemo(() => {
@@ -259,6 +271,46 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
       <div className="grid grid-cols-1 gap-4">
         {selectedRev === null ? (
           <>
+            {/* Gráfico de Disponibilidad */}
+            <ChartCard title="Disponibilidad" accentBar="bg-sky-400">
+              <div className="flex flex-col lg:flex-row items-center gap-6">
+                <div style={{ width: 200, height: 200 }}>
+                  <PieChart width={200} height={200}>
+                    <Pie
+                      data={availabilityData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={70}
+                      innerRadius={40}
+                      paddingAngle={2}
+                    >
+                      {availabilityData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </div>
+                <div className="flex-1 space-y-3">
+                  {availabilityData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-3">
+                      <div
+                        className="w-3.5 h-3.5 rounded-full"
+                        style={{ backgroundColor: item.fill }}
+                      />
+                      <span className="text-sm text-muted-foreground flex-1">{item.name}</span>
+                      <span className="text-sm font-semibold text-foreground">{formatNum(item.value)}</span>
+                      <span className="text-xs text-muted-foreground w-12 text-right">
+                        {kpis.total > 0 ? Math.round((item.value / kpis.total) * 100) : 0}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </ChartCard>
+
             {/* Top 10 artículos - COMENTADO POR AHORA */}
             {false && (
               <ChartCard title="Top 10 artículos más en stock" accentBar="bg-emerald-400">
@@ -310,30 +362,6 @@ export function StockDashboard({ initialSelectedRev }: { initialSelectedRev?: nu
                 </ResponsiveContainer>
               </ChartCard>
             )}
-
-            {/* Tabla de artículos */}
-            <ChartCard title="Ranking de artículos" accentBar="bg-amber-400">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="py-2.5 pr-3 text-left text-muted-foreground font-medium">#</th>
-                      <th className="py-2.5 pr-3 text-left text-muted-foreground font-medium">Artículo</th>
-                      <th className="py-2.5 text-right text-muted-foreground font-medium">Unidades</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {topArticlesData.map((item, idx) => (
-                      <tr key={item.artCodi} className="hover:bg-muted/40 transition-colors">
-                        <td className="py-2.5 pr-3 text-muted-foreground font-mono">{idx + 1}</td>
-                        <td className="py-2.5 pr-3 text-foreground font-medium truncate">{item.artNmot}</td>
-                        <td className="py-2.5 text-right font-medium text-foreground">{formatNum(item.cantidad)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </ChartCard>
           </>
         ) : (
           <>
